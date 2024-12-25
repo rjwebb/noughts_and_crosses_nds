@@ -1,37 +1,59 @@
-#include <gl2d.h>
+#include <crab.h>
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
 
-glImage Crab[1];
+// glImage Crab[1];
 
 int main(void) {
   // put the main screen on the bottom lcd
-  lcdMainOnBottom();
+  // lcdMainOnBottom();
 
   // Sprite initialisation
-  videoSetMode(MODE_5_3D);
+  videoSetMode(MODE_0_2D);
 
   consoleDemoInit();
 
   int keys = 0;
 
-  glScreen2D();
+  oamInit(&oamMain, SpriteMapping_1D_64, false);
+  vramSetBankA(VRAM_A_MAIN_SPRITE);
 
-  while (pmMainLoop() && !(keys & KEY_B)) {
+  u16 *gfx =
+      oamAllocateGfx(&oamMain, SpriteSize_64x64, SpriteColorFormat_256Color);
 
-    glBegin2D();
+  // copy in our ball graphics
+  dmaCopy(crabBitmap, gfx, crabBitmapLen);
+  dmaCopy(crabPal, SPRITE_PALETTE, crabPalLen);
 
-    // draw a triangle
-    glTriangleFilled(20, 100, 200, 30, 60, 40, RGB15(31, 0, 31));
+  while (pmMainLoop()) {
 
-    glEnd2D();
-
-    glFlush(0);
-
-    swiWaitForVBlank();
     scanKeys();
     keys = keysHeld();
+
+    oamSet(&oamMain,         // sub display
+           0,                // oam entry to set
+           0, 0,             // position
+           0,                // priority
+           0,                // palette for 16 color sprite or alpha for
+                             // bmp sprite
+           SpriteSize_64x64, // sprite size
+           SpriteColorFormat_256Color, // sprite color fornat
+           gfx,                        // pointer to the loaded graphics
+           0,                          // affine rotation to use
+           false,                      // double the size of rotated sprites
+           false,                      // don't hide the sprite
+           false, false,               // vflip, hflip
+           false                       // apply mosaic
+    );
+
+    swiWaitForVBlank();
+
+    if (keys & KEY_B) {
+      break;
+    }
+
+    oamUpdate(&oamMain);
   }
 
   return 0;
