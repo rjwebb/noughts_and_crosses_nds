@@ -26,6 +26,9 @@ void getButtonXY(int x, int y, int *buttonX, int *buttonY) {
 }
 
 int main(void) {
+
+  touchPosition touchXY;
+
   // put the main screen on the bottom lcd
   lcdMainOnBottom();
 
@@ -63,21 +66,38 @@ int main(void) {
 
   int clickedX = -1;
   int clickedY = -1;
-  int alreadyClicked = 0;
+  // int alreadyClicked = 0;
 
   while (pmMainLoop()) {
 
     scanKeys();
     keys = keysHeld();
+    touchRead(&touchXY);
+
+    getButtonXY(touchXY.px, touchXY.py, &clickedX, &clickedY);
 
     for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
+        int isClicked = clickedX == j && clickedY == i;
         int cell = cells[i][j];
+
         u16 *gfx = emptyGfx;
         if (cell == S_GOOSE) {
-          gfx = gooseGfx;
+          if (isClicked) {
+            gfx = gooseClickedGfx;
+          } else {
+            gfx = gooseGfx;
+          }
         } else if (cell == S_CRAB) {
-          gfx = crabGfx;
+          if (isClicked) {
+            gfx = crabClickedGfx;
+          } else {
+            gfx = crabGfx;
+          }
+        } else {
+          if (isClicked) {
+            gfx = emptyClickedGfx;
+          }
         }
 
         oamSet(&oamMain,                                 // sub display
