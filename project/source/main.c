@@ -48,7 +48,7 @@ int main(void) {
   dmaCopy(combined32Pal, SPRITE_PALETTE, combined32PalLen);
 
   u16 *sprite_gfx_mem[12];
-  loadSprites(sprite_gfx_mem, (u8 *)combined32Tiles, 3, spriteTilesLen);
+  loadSprites(sprite_gfx_mem, (u8 *)combined32Tiles, 6, spriteTilesLen);
 
   u16 *emptyGfx = sprite_gfx_mem[0];
   u16 *emptyClickedGfx = sprite_gfx_mem[1];
@@ -66,13 +66,30 @@ int main(void) {
 
   int clickedX = -1;
   int clickedY = -1;
-  // int alreadyClicked = 0;
+  int alreadyClicked = 0;
 
   while (pmMainLoop()) {
 
     scanKeys();
     keys = keysHeld();
     touchRead(&touchXY);
+
+    if (keys & KEY_TOUCH) {
+      alreadyClicked = 1;
+    } else {
+      if (alreadyClicked) {
+        alreadyClicked = 0;
+        if (clickedX != -1 && clickedY != -1) {
+          if (cells[clickedY][clickedX] == S_EMPTY) {
+            cells[clickedY][clickedX] = S_GOOSE;
+          } else if (cells[clickedY][clickedX] == S_GOOSE) {
+            cells[clickedY][clickedX] = S_CRAB;
+          } else {
+            cells[clickedY][clickedX] = S_EMPTY;
+          }
+        }
+      }
+    }
 
     getButtonXY(touchXY.px, touchXY.py, &clickedX, &clickedY);
 
