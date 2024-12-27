@@ -3,7 +3,27 @@
 #include <stdio.h>
 #include <string.h>
 
+// Enum to represent the state of a cell
 enum CellState { S_EMPTY = 0, S_GOOSE = 1, S_CRAB = 2 };
+
+void loadSprites(u16 *sprite_gfx_mem[], u8 *tiles, int numTiles, int tileSize) {
+  for (int i = 0; i < numTiles; i++) {
+    sprite_gfx_mem[i] =
+        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_256Color);
+    dmaCopy(tiles + tileSize * i, sprite_gfx_mem[i], tileSize);
+  }
+}
+
+void getButtonXY(int x, int y, int *buttonX, int *buttonY) {
+  if (x < 80 || x > 240 || y < 48 || y > 208) {
+    *buttonX = -1;
+    *buttonY = -1;
+    return;
+  }
+
+  *buttonX = (x - 80) / 32;
+  *buttonY = (y - 48) / 32;
+}
 
 int main(void) {
   // put the main screen on the bottom lcd
@@ -24,23 +44,15 @@ int main(void) {
   // copy in the palette - this is shared by all of the sprites
   dmaCopy(combined32Pal, SPRITE_PALETTE, combined32PalLen);
 
-  // empty sprite
-  u16 *emptyGfx =
-      oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_256Color);
-  u8 *emptyTiles = (u8 *)combined32Tiles;
-  dmaCopy(emptyTiles, emptyGfx, spriteTilesLen);
+  u16 *sprite_gfx_mem[12];
+  loadSprites(sprite_gfx_mem, (u8 *)combined32Tiles, 3, spriteTilesLen);
 
-  // goose sprite
-  u16 *gooseGfx =
-      oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_256Color);
-  u8 *gooseTiles = (u8 *)combined32Tiles + spriteTilesLen;
-  dmaCopy(gooseTiles, gooseGfx, spriteTilesLen);
-
-  // crab sprite
-  u16 *crabGfx =
-      oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_256Color);
-  u8 *crabTiles = (u8 *)combined32Tiles + (spriteTilesLen * 2);
-  dmaCopy(crabTiles, crabGfx, spriteTilesLen);
+  u16 *emptyGfx = sprite_gfx_mem[0];
+  u16 *emptyClickedGfx = sprite_gfx_mem[1];
+  u16 *gooseGfx = sprite_gfx_mem[2];
+  u16 *gooseClickedGfx = sprite_gfx_mem[3];
+  u16 *crabGfx = sprite_gfx_mem[4];
+  u16 *crabClickedGfx = sprite_gfx_mem[5];
 
   int cells[3][3] = {{S_EMPTY, S_EMPTY, S_EMPTY},
                      {S_EMPTY, S_EMPTY, S_EMPTY},
@@ -48,6 +60,10 @@ int main(void) {
 
   int gridXStart = 80;
   int gridYStart = 48;
+
+  int clickedX = -1;
+  int clickedY = -1;
+  int alreadyClicked = 0;
 
   while (pmMainLoop()) {
 
