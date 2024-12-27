@@ -37,8 +37,6 @@ int main(void) {
 
   consoleDemoInit();
 
-  int keys = 0;
-
   int spriteTilesLen = 32 * 32;
 
   oamInit(&oamMain, SpriteMapping_1D_128, false);
@@ -68,24 +66,52 @@ int main(void) {
   int clickedY = -1;
   int alreadyClicked = 0;
 
-  while (pmMainLoop()) {
+  int isGoose = 1;
 
+  int angle = 0;
+  int keys = 0;
+  while (pmMainLoop()) {
     scanKeys();
     keys = keysHeld();
     touchRead(&touchXY);
 
+    // check for a winner
+    int winner = 0;
+    // check rows and columns
+    for (int i = 0; i < 3; i++) {
+      if ((cells[i][0] != S_EMPTY && cells[i][0] == cells[i][1] &&
+           cells[i][0] == cells[i][2]) ||
+          (cells[0][i] != S_EMPTY && cells[1][i] == cells[0][i] &&
+           cells[0][i] == cells[2][i])) {
+        winner = cells[i][i];
+      }
+    }
+    // check diagonals
+    if ((cells[0][0] != S_EMPTY && cells[0][0] == cells[1][1] &&
+         cells[0][0] == cells[2][2]) ||
+        (cells[0][2] != S_EMPTY && cells[0][2] == cells[1][1] &&
+         cells[0][2] == cells[2][0])) {
+      winner = cells[1][1];
+    }
+
+    if (winner != 0) {
+      angle = (angle - 512) % 65534;
+    }
+
     if (keys & KEY_TOUCH) {
       alreadyClicked = 1;
     } else {
-      if (alreadyClicked) {
+      if (winner == 0 && alreadyClicked) {
         alreadyClicked = 0;
         if (clickedX != -1 && clickedY != -1) {
           if (cells[clickedY][clickedX] == S_EMPTY) {
-            cells[clickedY][clickedX] = S_GOOSE;
-          } else if (cells[clickedY][clickedX] == S_GOOSE) {
-            cells[clickedY][clickedX] = S_CRAB;
-          } else {
-            cells[clickedY][clickedX] = S_EMPTY;
+            if (isGoose) {
+              cells[clickedY][clickedX] = S_GOOSE;
+              isGoose = 0;
+            } else {
+              cells[clickedY][clickedX] = S_CRAB;
+              isGoose = 1;
+            }
           }
         }
       }
@@ -99,46 +125,68 @@ int main(void) {
         int cell = cells[i][j];
 
         u16 *gfx = emptyGfx;
+        int rotIndex = 0;
         if (cell == S_GOOSE) {
-          if (isClicked) {
+          if (winner == 0 && isClicked) {
             gfx = gooseClickedGfx;
           } else {
+            if (winner == S_GOOSE) {
+              rotIndex = 1;
+            }
             gfx = gooseGfx;
           }
         } else if (cell == S_CRAB) {
-          if (isClicked) {
+          if (winner == 0 && isClicked) {
             gfx = crabClickedGfx;
           } else {
+            if (winner == S_CRAB) {
+              rotIndex = 1;
+            }
             gfx = crabGfx;
           }
         } else {
-          if (isClicked) {
+          if (winner == 0 && isClicked) {
             gfx = emptyClickedGfx;
           }
         }
 
-        oamSet(&oamMain,                                 // sub display
-               i * 3 + j,                                // oam entry to set
-               gridXStart + j * 32, gridYStart + i * 32, // position
-               0,                                        // priority
+        oamSet(&oamMain,  // sub display
+               i * 3 + j, // oam entry to set
+               //  offset position because we are rotating the sprites, so their
+               //  center is offset
+               gridXStart + j * 32 - 16, gridYStart + i * 32 - 16, // position
+               0,                                                  // priority
                0,                // palette for 16 color sprite or alpha for
                                  // bmp sprite
                SpriteSize_32x32, // sprite size
                SpriteColorFormat_256Color, // sprite color fornat
                gfx,                        // pointer to the loaded graphics
-               0,                          // affine rotation to use
-               false,                      // double the size of rotated sprites
+               rotIndex,                   // affine rotation to use
+               true,                       // double the size of rotated sprites
                false,                      // don't hide the sprite
                false, false,               // vflip, hflip
                false                       // apply mosaic
         );
       }
     }
+    oamRotateScale(&oamMain, 0, 0, (1 << 8), (1 << 8));
+    oamRotateScale(&oamMain, 1, angle - 32767, (1 << 8), (1 << 8));
 
     swiWaitForVBlank();
 
     if (keys & KEY_B) {
       break;
+    }
+
+    if (keys & KEY_START) {
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+          cells[i][j] = S_EMPTY;
+        }
+      }
+      isGoose = 1;
+      angle = 0;
+      winner = 0;
     }
 
     oamUpdate(&oamMain);
