@@ -39,13 +39,17 @@ int main(void) {
 
   int spriteTilesLen = 32 * 32;
 
+  // functions starting with "oam" are for the Object Attribute Memory
+  // this is where the sprites are stored
+  // and where hardware-level manipulation of the sprites is done
+  // such as rotation, scaling, mosaic
   oamInit(&oamMain, SpriteMapping_1D_128, false);
   vramSetBankA(VRAM_A_MAIN_SPRITE);
 
   // copy in the palette - this is shared by all of the sprites
   dmaCopy(combined32Pal, SPRITE_PALETTE, combined32PalLen);
 
-  u16 *sprite_gfx_mem[12];
+  u16 *sprite_gfx_mem[6];
   loadSprites(sprite_gfx_mem, (u8 *)combined32Tiles, 6, spriteTilesLen);
 
   u16 *emptyGfx = sprite_gfx_mem[0];
@@ -94,6 +98,8 @@ int main(void) {
       winner = cells[1][1];
     }
 
+    // we want to spin the cells belonging to the winner if there is a winner
+    // but only update the angle when there is a winner
     if (winner != 0) {
       angle = (angle - 512) % 65534;
     }
@@ -101,6 +107,8 @@ int main(void) {
     if (keys & KEY_TOUCH) {
       alreadyClicked = 1;
     } else {
+      // we only want to update the cell if the touch is released
+      // this is a simple way of simulating a "click" event
       if (winner == 0 && alreadyClicked) {
         alreadyClicked = 0;
         if (clickedX != -1 && clickedY != -1) {
@@ -117,6 +125,8 @@ int main(void) {
       }
     }
 
+    // get the currently touched button, this is used for click events
+    // (in the next tick, see above) and to highlight the current pressed button
     getButtonXY(touchXY.px, touchXY.py, &clickedX, &clickedY);
 
     for (int i = 0; i < 3; i++) {
@@ -124,9 +134,11 @@ int main(void) {
         int isClicked = clickedX == j && clickedY == i;
         int cell = cells[i][j];
 
+        // set the correct sprite for the cell
         u16 *gfx = emptyGfx;
         int rotIndex = 0;
         if (cell == S_GOOSE) {
+          // only show the clicked sprite if there is no winner yet
           if (winner == 0 && isClicked) {
             gfx = gooseClickedGfx;
           } else {

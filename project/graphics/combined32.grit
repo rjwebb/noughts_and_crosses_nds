@@ -1,6 +1,8 @@
--m!
-
+# See https://www.coranac.com/man/grit/html/grit.htm for descriptions of these flags
+# 8 bit color depth (256 colors)
 -gB8
 
+# Mw and Mh are needed because we want 32x32 sprites, but by default GRIT makes 8x8 tiles.
+# so we have to define "metatiles" that consist of 4 by 4 tiles.
 -Mw 4
 -Mh 4
